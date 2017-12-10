@@ -3,20 +3,27 @@ package com.luugiathuy.apps.remotebluetooth;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.Locale;
 
 public class RemoteBluetooth extends Activity {
 	
@@ -26,6 +33,8 @@ public class RemoteBluetooth extends Activity {
 	// Intent request codes
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
+
+    private final int REQ_CODE_SPEECH_INPUT = 100;
     
     // Message types sent from the BluetoothChatService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -46,6 +55,8 @@ public class RemoteBluetooth extends Activity {
     private BluetoothCommandService mCommandService = null;
 
     private EditText editText;
+    private TextView txtSpeechInput;
+    private ImageButton btnSpeak;
 
     private boolean clear = false;
 	
@@ -67,28 +78,39 @@ public class RemoteBluetooth extends Activity {
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        editText = (EditText) findViewById(R.id.editText);
-        editText.addTextChangedListener(new TextWatcher() {
+//        editText = (EditText) findViewById(R.id.editText);
+//        editText.addTextChangedListener(new TextWatcher() {
+//
+//            @Override
+//            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+//
+//            }
+//
+//            @Override
+//            public void onTextChanged(CharSequence s, int start, int before, int count) {
+////                String change = s.subSequence(before, count).toString();
+////                byte[] bytes = change.getBytes();
+////                mCommandService.write(bytes);
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable s) {
+//                if (s.toString().equals(""))  {
+//                    return;
+//                }
+//                mCommandService.write(s.toString().getBytes());
+//                editText.setText("");
+//            }
+//        });
+
+        txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
+
+        btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
+        btnSpeak.setOnClickListener(new View.OnClickListener() {
 
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-//                String change = s.subSequence(before, count).toString();
-//                byte[] bytes = change.getBytes();
-//                mCommandService.write(bytes);
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.toString().equals(""))  {
-                    return;
-                }
-                mCommandService.write(s.toString().getBytes());
-                editText.setText("");
+            public void onClick(View v) {
+                promptSpeechInput();
             }
         });
 
@@ -186,6 +208,24 @@ public class RemoteBluetooth extends Activity {
             }
         }
     };
+
+    /**
+     * Showing google speech input dialog
+     * */
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "speak");
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (ActivityNotFoundException a) {
+            Toast.makeText(getApplicationContext(),
+                    "speech not supported",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
 	
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
@@ -211,6 +251,19 @@ public class RemoteBluetooth extends Activity {
                 Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
                 finish();
             }
+        case REQ_CODE_SPEECH_INPUT:
+            if (resultCode == RESULT_OK && null != data) {
+                ArrayList<String> result = data
+                        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                String topResult = result.get(0);
+                txtSpeechInput.setText(topResult);
+                if (mCommandService != null) {
+                    mCommandService.write(topResult.getBytes());
+                } else {
+                    Toast.makeText(this, "Connect to Bluetooth", Toast.LENGTH_SHORT).show();
+                }
+            }
+            break;
         }
     }
 
