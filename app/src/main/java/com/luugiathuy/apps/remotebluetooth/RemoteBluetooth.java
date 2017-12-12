@@ -78,31 +78,6 @@ public class RemoteBluetooth extends Activity {
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-//        editText = (EditText) findViewById(R.id.editText);
-//        editText.addTextChangedListener(new TextWatcher() {
-//
-//            @Override
-//            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-//
-//            }
-//
-//            @Override
-//            public void onTextChanged(CharSequence s, int start, int before, int count) {
-////                String change = s.subSequence(before, count).toString();
-////                byte[] bytes = change.getBytes();
-////                mCommandService.write(bytes);
-//            }
-//
-//            @Override
-//            public void afterTextChanged(Editable s) {
-//                if (s.toString().equals(""))  {
-//                    return;
-//                }
-//                mCommandService.write(s.toString().getBytes());
-//                editText.setText("");
-//            }
-//        });
-
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
 
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
@@ -112,6 +87,7 @@ public class RemoteBluetooth extends Activity {
             public void onClick(View v) {
                 promptSpeechInput();
             }
+
         });
 
         // If the adapter is null, then Bluetooth is not supported
@@ -259,6 +235,7 @@ public class RemoteBluetooth extends Activity {
                 txtSpeechInput.setText(topResult);
                 if (mCommandService != null) {
                     mCommandService.write(topResult.getBytes());
+                    mCommandService.write((byte) ' ');
                 } else {
                     Toast.makeText(this, "Connect to Bluetooth", Toast.LENGTH_SHORT).show();
                 }

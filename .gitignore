@@ -1,3 +1,9 @@
+.idea/*
+.settings/*
+*.iml
+.project
+.settings
+
 # Built application files
 *.apk
 *.ap_
