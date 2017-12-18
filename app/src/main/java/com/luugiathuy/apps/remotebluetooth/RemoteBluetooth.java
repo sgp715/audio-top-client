@@ -11,12 +11,15 @@ import android.os.Message;
 import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -46,6 +49,11 @@ public class RemoteBluetooth extends Activity {
     // Key names received from the BluetoothCommandService Handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
+
+    private float initX =0;
+    private float initY =0;
+    private float disX =0;
+    private float disY =0;
 	
 	// Name of the connected device
     private String mConnectedDeviceName = null;
@@ -55,8 +63,14 @@ public class RemoteBluetooth extends Activity {
     private BluetoothCommandService mCommandService = null;
 
     private EditText editText;
-    private TextView txtSpeechInput;
-    private ImageButton btnSpeak;
+
+    private Button lClick;
+    private Button rClick;
+
+    private TextView typeText;
+    private Button send;
+
+    private TextView mousePad;
 
     private boolean clear = false;
 	
@@ -78,17 +92,111 @@ public class RemoteBluetooth extends Activity {
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
-
-        btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
-        btnSpeak.setOnClickListener(new View.OnClickListener() {
+        lClick = (Button) findViewById(R.id.lClick);
+        lClick.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                promptSpeechInput();
+                if (mCommandService != null) {
+                    sendSignal(2);
+                    Log.d("CLICK", "left");
+                }
             }
 
         });
+
+//        lClick.setOnTouchListener(new View.OnTouchListener() {
+//            private void sendLClick(String direction) {
+//                if (mCommandService != null) {
+//                    sendSignal(3);
+//                    Log.d("CLICK", "right " + direction);
+//                }
+//            }
+//
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                int action = event.getAction();
+//                if (KeyEvent.ACTION_DOWN == action) {
+//                    sendLClick("down");
+//                } else if (KeyEvent.ACTION_UP== action) {
+//                    sendLClick("up");
+//                }
+//                return true;
+//            }
+//
+//        });
+
+        rClick = (Button) findViewById(R.id.rClick);
+        rClick.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                if (mCommandService != null) {
+                    sendSignal(3);
+                    Log.d("CLICK", "right");
+                }
+            }
+
+        });
+
+
+        typeText = (TextView) findViewById(R.id.typeText);
+//        typeText.addTextChangedListener(new TextWatcher() {
+//            @Override
+//            public void onTextChanged(CharSequence s, int start, int before, int count) {
+//            }
+//
+//            @Override
+//            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable s) {
+//            }
+//        });
+        send = (Button) findViewById(R.id.send);
+        send.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCommandService != null) {
+                    sendSignal(1);
+                    mCommandService.write(typeText.getText().toString().getBytes());
+                    Log.d("SEND", "sending: " + typeText.getText().toString());
+                    mCommandService.write(0);
+                    typeText.setText("");
+                }
+            }
+        });
+        mousePad = (TextView) findViewById(R.id.mousePad);
+        mousePad.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if(mCommandService != null){
+                    switch(event.getAction()){
+                        case MotionEvent.ACTION_DOWN:
+                            //save X and Y positions when user touches the TextView
+                            initX = event.getX();
+                            initY = event.getY();
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            disX = event.getX()- initX; //Mouse movement in x direction
+                            disY = event.getY()- initY; //Mouse movement in y direction
+                            sendSignal(4);
+                            mCommandService.write((disX +","+ disY).getBytes());
+                            Log.d("COORDS", "coordinates: " + (disX +","+ disY));
+                            mCommandService.write(' ');
+                            initX = event.getX();
+                            initY = event.getY();
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            initX = 0;
+                            initY = 0;
+                    }
+                }
+                return true;
+            }
+        });
+
 
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) {
@@ -98,10 +206,18 @@ public class RemoteBluetooth extends Activity {
         }
     }
 
+    private void sendSignal(int signal) {
+        if(mCommandService != null){
+            mCommandService.write(0);
+            mCommandService.write(signal);
+            mCommandService.write(0);
+        }
+    }
+
 	@Override
 	protected void onStart() {
 		super.onStart();
-		
+
 		// If BT is not on, request that it be enabled.
         // setupCommand() will then be called during onActivityResult
 		if (!mBluetoothAdapter.isEnabled()) {
@@ -114,11 +230,11 @@ public class RemoteBluetooth extends Activity {
 				setupCommand();
 		}
 	}
-	
+
 	@Override
 	protected void onResume() {
 		super.onResume();
-		
+
 		// Performing this check in onResume() covers the case in which BT was
         // not enabled during onStart(), so we were paused to enable it...
         // onResume() will be called when ACTION_REQUEST_ENABLE activity returns.
@@ -227,20 +343,6 @@ public class RemoteBluetooth extends Activity {
                 Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
                 finish();
             }
-        case REQ_CODE_SPEECH_INPUT:
-            if (resultCode == RESULT_OK && null != data) {
-                ArrayList<String> result = data
-                        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                String topResult = result.get(0);
-                txtSpeechInput.setText(topResult);
-                if (mCommandService != null) {
-                    mCommandService.write(topResult.getBytes());
-                    mCommandService.write((byte) ' ');
-                } else {
-                    Toast.makeText(this, "Connect to Bluetooth", Toast.LENGTH_SHORT).show();
-                }
-            }
-            break;
         }
     }
 
