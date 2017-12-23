@@ -5,7 +5,7 @@ android {
     buildToolsVersion "25.0.2"
 
     defaultConfig {
-        applicationId "com.luugiathuy.apps.remotebluetooth"
+        applicationId "org.sgp715.apps.remotebluetooth"
         minSdkVersion 7
         targetSdkVersion 7
     }
