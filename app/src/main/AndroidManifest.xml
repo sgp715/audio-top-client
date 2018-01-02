@@ -2,11 +2,10 @@
 <manifest package="org.sgp715.apps.remotebluetooth"
       android:versionCode="1"
       android:versionName="1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-sdk android:minSdkVersion="7" />
+    <!--<uses-sdk android:minSdkVersion="7" />-->
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
-
-    <application android:icon="@mipmap/blue" android:label="@string/app_name">
+    <application android:icon="@mipmap/laptop" android:label="@string/app_name">
         <activity android:name=".RemoteBluetooth"
                   android:label="@string/app_name">
             <intent-filter>
@@ -18,6 +17,5 @@
                   android:label="@string/select_device"
                   android:theme="@android:style/Theme.Dialog"
                   android:configChanges="orientation|keyboardHidden" />
-
     </application>
 </manifest>

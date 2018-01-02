@@ -67,13 +67,11 @@ public class RemoteBluetooth extends Activity {
     private Button lClick;
     private Button rClick;
 
-    private TextView typeText;
+    private EditText typeText;
     private Button send;
 
     private TextView mousePad;
 
-    private boolean clear = false;
-	
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -105,6 +103,19 @@ public class RemoteBluetooth extends Activity {
 
         });
 
+        rClick = (Button) findViewById(R.id.rClick);
+        rClick.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                if (mCommandService != null) {
+                    sendSignal(3);
+                    Log.d("CLICK", "right");
+                }
+            }
+
+        });
+
 //        lClick.setOnTouchListener(new View.OnTouchListener() {
 //            private void sendLClick(String direction) {
 //                if (mCommandService != null) {
@@ -126,21 +137,8 @@ public class RemoteBluetooth extends Activity {
 //
 //        });
 
-        rClick = (Button) findViewById(R.id.rClick);
-        rClick.setOnClickListener(new View.OnClickListener() {
 
-            @Override
-            public void onClick(View v) {
-                if (mCommandService != null) {
-                    sendSignal(3);
-                    Log.d("CLICK", "right");
-                }
-            }
-
-        });
-
-
-        typeText = (TextView) findViewById(R.id.typeText);
+        typeText = (EditText) findViewById(R.id.typeText);
 //        typeText.addTextChangedListener(new TextWatcher() {
 //            @Override
 //            public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -158,7 +156,7 @@ public class RemoteBluetooth extends Activity {
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mCommandService != null) {
+                if (mCommandService != null && typeText.getText() != null) {
                     sendSignal(1);
                     mCommandService.write(typeText.getText().toString().getBytes());
                     Log.d("SEND", "sending: " + typeText.getText().toString());
@@ -182,7 +180,11 @@ public class RemoteBluetooth extends Activity {
                             disX = event.getX()- initX; //Mouse movement in x direction
                             disY = event.getY()- initY; //Mouse movement in y direction
                             sendSignal(4);
-                            mCommandService.write((disX +","+ disY).getBytes());
+                            //  / v.getWidth()
+                            mCommandService.write(String.valueOf(disX).getBytes());
+                            mCommandService.write(0);
+                            mCommandService.write(String.valueOf(disY).getBytes());
+                            mCommandService.write(0);
                             Log.d("COORDS", "coordinates: " + (disX +","+ disY));
                             mCommandService.write(' ');
                             initX = event.getX();
@@ -300,24 +302,6 @@ public class RemoteBluetooth extends Activity {
             }
         }
     };
-
-    /**
-     * Showing google speech input dialog
-     * */
-    private void promptSpeechInput() {
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "speak");
-        try {
-            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
-        } catch (ActivityNotFoundException a) {
-            Toast.makeText(getApplicationContext(),
-                    "speech not supported",
-                    Toast.LENGTH_SHORT).show();
-        }
-    }
 	
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
